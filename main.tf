@@ -1,10 +1,14 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+}
+
 provider "azurerm" {
   features {}
-
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
-  subscription_id = var.subscription_id
 }
 
 # Resource Group
@@ -18,10 +22,9 @@ resource "azurerm_service_plan" "plan" {
   name                = var.app_service_plan_name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  os_type             = "Windows" # or "Linux" depending on your app
-  sku_name            = "B1"      # This combines tier and size
+  os_type             = "Windows"
+  sku_name            = "B1"
 }
-
 
 # App Service (Web App)
 resource "azurerm_app_service" "app" {
