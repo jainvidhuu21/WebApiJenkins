@@ -1,42 +1,65 @@
-provider "azurerm" {
-  features {}
+pipeline {
+    agent any
 
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
-  subscription_id = var.subscription_id
-}
+    environment {
+        ARM_CLIENT_ID       = credentials('AZURE_CLIENT_ID')
+        ARM_CLIENT_SECRET   = credentials('AZURE_CLIENT_SECRET')
+        ARM_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
+        ARM_TENANT_ID       = credentials('AZURE_TENANT_ID')
+    }
 
-# Resource Group
-resource "azurerm_resource_group" "rg" {
-  name     = var.resource_group_name
-  location = var.location
-}
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/jainvidhuu21/WebApiJenkins', branch: 'master'
+            }
+        }
 
-# App Service Plan
-resource "azurerm_app_service_plan" "plan" {
-  name                = var.app_service_plan_name
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+        stage('Terraform Init') {
+            steps {
+                bat 'terraform init'
+            }
+        }
 
-  sku {
-    tier = "Basic"
-    size = "B1"
-  }
-}
+        stage('Terraform Plan') {
+            steps {
+                bat """
+                    terraform plan ^
+                      -var client_id=%ARM_CLIENT_ID% ^
+                      -var client_secret=%ARM_CLIENT_SECRET% ^
+                      -var tenant_id=%ARM_TENANT_ID% ^
+                      -var subscription_id=%ARM_SUBSCRIPTION_ID%
+                """
+            }
+        }
 
-# App Service (Web App)
-resource "azurerm_app_service" "app" {
-  name                = var.app_service_name
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  app_service_plan_id = azurerm_app_service_plan.plan.id
+        stage('Terraform Apply') {
+            steps {
+                bat """
+                    terraform apply -auto-approve ^
+                      -var client_id=%ARM_CLIENT_ID% ^
+                      -var client_secret=%ARM_CLIENT_SECRET% ^
+                      -var tenant_id=%ARM_TENANT_ID% ^
+                      -var subscription_id=%ARM_SUBSCRIPTION_ID%
+                """
+            }
+        }
 
-  site_config {
-    always_on = true
-  }
+        stage('Build .NET App') {
+            steps {
+                dir('WebApiJenkins') { // Ensure this matches your repo folder
+                    bat 'dotnet publish -c Release -o publish'
+                }
+            }
+        }
 
-  app_settings = {
-    "WEBSITE_RUN_FROM_PACKAGE" = "1"
-  }
+        stage('Deploy to Azure') {
+            steps {
+                bat """
+                    powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
+                    az webapp deployment source config-zip --resource-group jenkins-vidhi-rg --name jenkins-vidhi-app123 --src publish.zip
+                """
+            }
+        }
+    }
 }
