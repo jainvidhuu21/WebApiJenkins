@@ -13,7 +13,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git bramch: 'master',  url: 'https://github.com/jainvidhuu21/WebApiJenkins'
+                git branch: 'master',  url: 'https://github.com/jainvidhuu21/WebApiJenkins'
             }
         }
 
