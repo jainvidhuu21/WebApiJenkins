@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'master', url: 'https://github.com/jainvidhuu21/WebApiJenkins' 
+                git branch: 'master', url: 'https://github.com/jainvidhuu21/WebApiJenkins'
             }
         }
 
@@ -23,32 +23,19 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                bat '''
-                    terraform plan ^
-                      -var client_id=%ARM_CLIENT_ID% ^
-                      -var client_secret=%ARM_CLIENT_SECRET% ^
-                      -var tenant_id=%ARM_TENANT_ID% ^
-                      -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                    '''
+                bat 'terraform plan'
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                bat '''
-                terraform apply -auto-approve ^
-                -var client_id=%ARM_CLIENT_ID% ^
-                -var client_secret=%ARM_CLIENT_SECRET% ^
-                -var tenant_id=%ARM_TENANT_ID% ^
-                -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                '''
+                bat 'terraform apply -auto-approve'
             }
         }
 
-
         stage('Build .NET App') {
             steps {
-                dir('WebApiJenkins') { // Ensure this matches your repo folder
+                dir('WebApiJenkins') {
                     bat 'dotnet publish -c Release -o publish'
                 }
             }
@@ -58,9 +45,16 @@ pipeline {
             steps {
                 bat '''
                     powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
+                    az login --service-principal -u %ARM_CLIENT_ID% -p %ARM_CLIENT_SECRET% --tenant %ARM_TENANT_ID%
                     az webapp deployment source config-zip --resource-group jenkins-vidhi1-rg --name jenkins-vidhi-app21 --src publish.zip
-                    '''
+                '''
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
