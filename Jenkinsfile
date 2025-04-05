@@ -9,9 +9,9 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/jainvidhuu21/WebApiJenkins', branch: 'master'
+                git branch: 'master', url: 'https://github.com/jainvidhuu21/WebApiJenkins' 
             }
         }
 
@@ -23,27 +23,27 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                bat """
+                bat '''
                     terraform plan ^
                       -var client_id=%ARM_CLIENT_ID% ^
                       -var client_secret=%ARM_CLIENT_SECRET% ^
                       -var tenant_id=%ARM_TENANT_ID% ^
                       -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                """
+                    '''
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                bat """
+                bat '''
                 terraform apply -auto-approve ^
                 -var client_id=%ARM_CLIENT_ID% ^
                 -var client_secret=%ARM_CLIENT_SECRET% ^
                 -var tenant_id=%ARM_TENANT_ID% ^
                 -var subscription_id=%ARM_SUBSCRIPTION_ID%
-            """
+                '''
+            }
         }
-    }
 
 
         stage('Build .NET App') {
@@ -56,10 +56,10 @@ pipeline {
 
         stage('Deploy to Azure') {
             steps {
-                bat """
+                bat '''
                     powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
-                    az webapp deployment source config-zip --resource-group jenkins-vidhi-rg --name jenkins-vidhi-app123 --src publish.zip
-                """
+                    az webapp deployment source config-zip --resource-group jenkins-vidhi1-rg --name jenkins-vidhi-app123 --src publish.zip
+                    '''
             }
         }
     }
