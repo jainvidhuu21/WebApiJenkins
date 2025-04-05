@@ -21,7 +21,7 @@ variable "subscription_id" {
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
-  default     = "jenkins-vidhi-rg"
+  default     = "jenkins-vidhi21-rg"
 }
 
 variable "location" {
@@ -39,5 +39,5 @@ variable "app_service_plan_name" {
 variable "app_service_name" {
   description = "App Service (Web App) name"
   type        = string
-  default     = "jenkins-vidhi-app123"
+  default     = "jenkins-vidhi21-app123"
 }
