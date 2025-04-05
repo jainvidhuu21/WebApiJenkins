@@ -1,4 +1,3 @@
-// For terraform
 pipeline {
     agent any
 
@@ -24,30 +23,31 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                bat '''
+                bat """
                     terraform plan ^
                       -var client_id=%ARM_CLIENT_ID% ^
                       -var client_secret=%ARM_CLIENT_SECRET% ^
                       -var tenant_id=%ARM_TENANT_ID% ^
                       -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                    '''
+                """
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                bat '''
-                terraform apply -auto-approve ^
-                  -var client_id=%ARM_CLIENT_ID% ^
-                  -var client_secret=%ARM_CLIENT_SECRET% ^
-                  -var tenant_id=%ARM_TENANT_ID% ^
-                  -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                '''
+                bat """
+                    terraform apply -auto-approve ^
+                      -var client_id=%ARM_CLIENT_ID% ^
+                      -var client_secret=%ARM_CLIENT_SECRET% ^
+                      -var tenant_id=%ARM_TENANT_ID% ^
+                      -var subscription_id=%ARM_SUBSCRIPTION_ID%
+                """
             }
         }
-         stage('Build .NET App') {
+
+        stage('Build .NET App') {
             steps {
-                dir('WebApiJenkins') { // Adjust to your .NET project folder
+                dir('WebApiJenkins') { // Ensure this matches your repo folder
                     bat 'dotnet publish -c Release -o publish'
                 }
             }
@@ -55,11 +55,11 @@ pipeline {
 
         stage('Deploy to Azure') {
             steps {
-                bat '''
-                powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
-                az webapp deployment source config-zip --resource-group jenkins-vidhi-rg --name jenkins-vidhi-app123 --src publish.zip
-                '''
+                bat """
+                    powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
+                    az webapp deployment source config-zip --resource-group jenkins-vidhi-rg --name jenkins-vidhi-app123 --src publish.zip
+                """
             }
-        }   
+        }
     }
 }
