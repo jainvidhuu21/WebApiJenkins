@@ -1,18 +1,24 @@
-// For terraform
 pipeline {
     agent any
 
     environment {
         ARM_CLIENT_ID       = credentials('AZURE_CLIENT_ID')
         ARM_CLIENT_SECRET   = credentials('AZURE_CLIENT_SECRET')
-        ARM_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
         ARM_TENANT_ID       = credentials('AZURE_TENANT_ID')
+        ARM_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/jainvidhuu21/WebApiJenkins', branch: 'master'
+                git 'https://github.com/jainvidhuu21/WebApiJenkins'
+            }
+        }
+
+        stage('Clean .terraform') {
+            steps {
+                echo 'Cleaning existing .terraform folder...'
+                bat 'rmdir /s /q .terraform || echo .terraform does not exist'
             }
         }
 
@@ -25,41 +31,54 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 bat '''
-                    terraform plan ^
-                      -var client_id=%ARM_CLIENT_ID% ^
-                      -var client_secret=%ARM_CLIENT_SECRET% ^
-                      -var tenant_id=%ARM_TENANT_ID% ^
-                      -var subscription_id=%ARM_SUBSCRIPTION_ID%
-                    '''
+                    terraform plan -input=false -no-color ^
+                    -var "client_id=%ARM_CLIENT_ID%" ^
+                    -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                    -var "tenant_id=%ARM_TENANT_ID%" ^
+                    -var "subscription_id=%ARM_SUBSCRIPTION_ID%" ^
+                    -lock=false -parallelism=1 -refresh=true -debug
+                '''
             }
         }
 
         stage('Terraform Apply') {
+            when {
+                expression {
+                    return currentBuild.result == null || currentBuild.result == 'SUCCESS'
+                }
+            }
             steps {
+                input message: 'Apply Terraform changes?', ok: 'Apply'
                 bat '''
-                terraform apply -auto-approve ^
-                  -var client_id=%ARM_CLIENT_ID% ^
-                  -var client_secret=%ARM_CLIENT_SECRET% ^
-                  -var tenant_id=%ARM_TENANT_ID% ^
-                  -var subscription_id=%ARM_SUBSCRIPTION_ID%
+                    terraform apply -auto-approve ^
+                    -var "client_id=%ARM_CLIENT_ID%" ^
+                    -var "client_secret=%ARM_CLIENT_SECRET%" ^
+                    -var "tenant_id=%ARM_TENANT_ID%" ^
+                    -var "subscription_id=%ARM_SUBSCRIPTION_ID%"
                 '''
             }
         }
-         stage('Build .NET App') {
+
+        stage('Build .NET App') {
             steps {
-                dir('WebApiJenkins') { // Adjust to your .NET project folder
-                    bat 'dotnet publish -c Release -o publish'
-                }
+                bat 'dotnet build WebApi/WebApi.csproj --configuration Release'
             }
         }
 
         stage('Deploy to Azure') {
             steps {
-                bat '''
-                powershell Compress-Archive -Path WebApiJenkins\\publish\\* -DestinationPath publish.zip -Force
-                az webapp deployment source config-zip --resource-group jenkins-vidhi-rg --name jenkins-vidhi-app123 --src publish.zip
-                '''
+                echo 'Deploying .NET App to Azure...'
+                // Add your Azure deployment steps here
             }
-        }   
+        }
+    }
+
+    post {
+        failure {
+            echo "Pipeline failed. Check the logs above ☝️ for details."
+        }
+        success {
+            echo "Pipeline executed successfully 🎉"
+        }
     }
 }
