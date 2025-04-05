@@ -21,7 +21,7 @@ variable "subscription_id" {
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
-  default     = "jenkins-vidhi-rg"
+  default     = "jenkins-vidhi1-rg"
 }
 
 variable "location" {
