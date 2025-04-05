@@ -39,5 +39,5 @@ variable "app_service_plan_name" {
 variable "app_service_name" {
   description = "App Service (Web App) name"
   type        = string
-  default     = "jenkins-vidhi-app123"
+  default     = "jenkins-vidhi-app21"
 }
